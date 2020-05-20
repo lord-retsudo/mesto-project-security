@@ -2,6 +2,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const User = require('../models/users');
+const { JWT_SECRET_KEY } = require('../config');
+const NotFoundError = require('../errors/notFoundError');
+const ConflictError = require('../errors/conflictError');
 
 module.exports.getUsers = (req, res) => {
   User.find({})
@@ -14,38 +17,45 @@ module.exports.createUser = (req, res) => {
     name, about, avatar, email, password,
   } = req.body;
 
-  bcrypt.hash(password, 10)
-    .then((hash) => User.create({
-      name,
-      about,
-      avatar,
-      email,
-      password: hash,
-    }))
-    .then((user) => res.send({ data: user }))
-    .catch((err) => res.status(500).send({ message: `Произошла ошибка: ${err}` }));
+  User.countDocuments({ email })
+    .then((count) => {
+      if (count) throw new ConflictError('Пользователь с таким email уже существует в базе');
 
-  // User.create({ name, about, avatar, email })
-  //  .then((user) => res.send({ data: user }))
-  //   .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+      bcrypt.hash(password, 10)
+        .then((hash) => User.create({
+          name,
+          about,
+          avatar,
+          email,
+          password: hash,
+        }))
+        .then((user) => res.send({ data: user.omitPrivate() }))
+        .catch((err) => res.status(500).send({ message: `Произошла ошибка при создании пользователя: ${err}` }));
+    })
+    .catch((err) => {
+      const statusCode = err.statusCode || 500;
+      const message = statusCode === 500 ? 'Произошла ошибка' : err.message;
+      res.status(statusCode).send({ message });
+    });
 };
 
 module.exports.getUser = (req, res) => {
   User.findById(req.params.userId)
+    .orFail(() => new NotFoundError('Нет пользователя с таким id'))
     .then((user) => {
-      if (!user) {
-        res.status(404).send({ message: 'Нет пользователя с таким id' });
-        return;
-      }
       res.send({ data: user });
     })
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    .catch((err) => {
+      const statusCode = err.statusCode || 500;
+      const message = statusCode === 500 ? 'Произошла ошибка' : err.message;
+      res.status(statusCode).send({ message });
+    });
 };
 
 module.exports.modifyUser = (req, res) => {
   const { name, about } = req.body;
 
-  User.findByIdAndUpdate(req.user._id, { name, about }, { runValidators: true })
+  User.findByIdAndUpdate(req.user._id, { name, about }, { runValidators: true }, { new: true })
     .then((user) => res.send({ data: user }))
     .catch((err) => res.status(500).send({ message: `Произошла ошибка - ${err}` }));
 };
@@ -53,14 +63,8 @@ module.exports.modifyUser = (req, res) => {
 module.exports.modifyAvatar = (req, res) => {
   const { avatar } = req.body;
 
-  User.findByIdAndUpdate(req.user._id, { avatar }, { runValidators: true })
+  User.findByIdAndUpdate(req.user._id, { avatar }, { runValidators: true }, { new: true })
     .then((user) => {
-    /*
-      if (user._id !== req.user._id) {
-        res.status(404).send({ message: 'Запрещено изменять чужой аватар!' });
-        return;
-      }
-    */
       res.send({ data: user });
     })
     .catch((err) => res.status(500).send({ message: `Произошла ошибка  - ${err}` }));
@@ -71,12 +75,12 @@ module.exports.login = (req, res) => {
 
   return User.findUserByCredentials(email, password)
     .then((user) => {
-      const token = jwt.sign({ _id: user._id }, 'some-secret-key', { expiresIn: '7d' });
+      const token = jwt.sign({ _id: user._id }, JWT_SECRET_KEY, { expiresIn: '7d' });
       res.send({ token });
     })
     .catch((err) => {
-      res
-        .status(401)
-        .send({ message: err.message });
+      const statusCode = err.statusCode || 500;
+      const message = statusCode === 500 ? 'Произошла ошибка' : err.message;
+      res.status(statusCode).send({ message });
     });
 };

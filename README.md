@@ -5,9 +5,6 @@ Adding security features for Mesto Project
 # GitHub
 <https://github.com/lord-retsudo/mesto-project-security>
 
-# GitHub Pages
-<https://lord-retsudo.github.io/mesto-project-security/>
-
 ## Getting Started
 
 ### Installation 

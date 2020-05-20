@@ -1,4 +1,3 @@
-// const bcrypt = require('bcryptjs');
 const users = require('express').Router();
 
 const {
@@ -7,7 +6,6 @@ const {
 
 users.get('/', getUsers);
 users.get('/:userId', getUser);
-// users.post('/', createUser);
 users.patch('/me', modifyUser);
 users.patch('/me/avatar', modifyAvatar);
 

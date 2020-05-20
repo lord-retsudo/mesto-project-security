@@ -1,4 +1,6 @@
 const Card = require('../models/cards');
+const NotFoundError = require('../errors/notFoundError');
+const ForbiddenError = require('../errors/forbiddenError');
 
 module.exports.getCards = (req, res) => {
   Card.find({})
@@ -20,42 +22,45 @@ module.exports.createCard = (req, res) => {
 };
 
 module.exports.deleteCard = (req, res) => {
-  Card.findById(req.params.cardId)
+  Card.findById({ _id: req.params.cardId })
+    .orFail(() => new NotFoundError('Нет карточки с таким id'))
     .then((cards) => {
-      if (!cards) {
-        res.status(404).send({ message: 'Нет карточки с таким id' });
-        return;
-      }
-      if (cards.owner.toString() === req.user._id) {
+      if (cards.owner.equals(req.user._id)) {
         res.send({ data: cards });
         return Card.findByIdAndRemove(req.params.cardId);
       }
 
-      return Promise.reject(new Error('Карточка с таким id создана не вами'));
+      return Promise.reject(new ForbiddenError('Карточка с таким id создана не вами'));
     })
-    .catch((err) => res.status(500).send({ message: `Произошла ошибка - ${err}` }));
+    .catch((err) => {
+      const statusCode = err.statusCode || 500;
+      const message = statusCode === 500 ? 'Произошла ошибка' : err.message;
+      res.status(statusCode).send({ message });
+    });
 };
 
 module.exports.likeCard = (req, res) => {
   Card.findByIdAndUpdate(req.params.cardId, { $addToSet: { likes: req.user._id } }, { new: true })
+    .orFail(() => new NotFoundError('Нет карточки с таким id'))
     .then((cards) => {
-      if (!cards) {
-        res.status(404).send({ message: 'Нет карточки с таким id' });
-        return;
-      }
       res.send({ data: cards });
     })
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    .catch((err) => {
+      const statusCode = err.statusCode || 500;
+      const message = statusCode === 500 ? 'Произошла ошибка' : err.message;
+      res.status(statusCode).send({ message });
+    });
 };
 
 module.exports.dislikeCard = (req, res) => {
   Card.findByIdAndUpdate(req.params.cardId, { $pull: { likes: req.user._id } }, { new: true })
+    .orFail(() => new NotFoundError('Нет карточки с таким id'))
     .then((cards) => {
-      if (!cards) {
-        res.status(404).send({ message: 'Нет карточки с таким id' });
-        return;
-      }
       res.send({ data: cards });
     })
-    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
+    .catch((err) => {
+      const statusCode = err.statusCode || 500;
+      const message = statusCode === 500 ? 'Произошла ошибка' : err.message;
+      res.status(statusCode).send({ message });
+    });
 };
