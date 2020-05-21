@@ -29,8 +29,7 @@ module.exports.createUser = (req, res) => {
           email,
           password: hash,
         }))
-        .then((user) => res.send({ data: user.omitPrivate() }))
-        .catch((err) => res.status(500).send({ message: `Произошла ошибка при создании пользователя: ${err}` }));
+        .then((user) => res.send({ data: user.omitPrivate() }));
     })
     .catch((err) => {
       const statusCode = err.statusCode || 500;
@@ -55,9 +54,9 @@ module.exports.getUser = (req, res) => {
 module.exports.modifyUser = (req, res) => {
   const { name, about } = req.body;
 
-  User.findByIdAndUpdate(req.user._id, { name, about }, { runValidators: true }, { new: true })
+  User.findByIdAndUpdate(req.user._id, { name, about }, { runValidators: true, new: true })
     .then((user) => res.send({ data: user }))
-    .catch((err) => res.status(500).send({ message: `Произошла ошибка - ${err}` }));
+    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
 };
 
 module.exports.modifyAvatar = (req, res) => {
@@ -67,7 +66,7 @@ module.exports.modifyAvatar = (req, res) => {
     .then((user) => {
       res.send({ data: user });
     })
-    .catch((err) => res.status(500).send({ message: `Произошла ошибка  - ${err}` }));
+    .catch(() => res.status(500).send({ message: 'Произошла ошибка' }));
 };
 
 module.exports.login = (req, res) => {

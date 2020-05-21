@@ -18,7 +18,7 @@ module.exports.createCard = (req, res) => {
     name, link, owner, likes, createdAt,
   })
     .then((cards) => res.send({ data: cards }))
-    .catch((err) => res.status(500).send({ message: `Произошла ошибка: + ${err}` }));
+    .catch((err) => res.status(500).send({ message: 'Произошла ошибка' }));
 };
 
 module.exports.deleteCard = (req, res) => {
