@@ -21,7 +21,7 @@ module.exports.createUser = (req, res) => {
     .then((count) => {
       if (count) throw new ConflictError('Пользователь с таким email уже существует в базе');
 
-      bcrypt.hash(password, 10)
+      return bcrypt.hash(password, 10)
         .then((hash) => User.create({
           name,
           about,
@@ -62,7 +62,7 @@ module.exports.modifyUser = (req, res) => {
 module.exports.modifyAvatar = (req, res) => {
   const { avatar } = req.body;
 
-  User.findByIdAndUpdate(req.user._id, { avatar }, { runValidators: true }, { new: true })
+  User.findByIdAndUpdate(req.user._id, { avatar }, { runValidators: true, new: true })
     .then((user) => {
       res.send({ data: user });
     })
